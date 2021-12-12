@@ -31,6 +31,42 @@ const float MATH_1DIV2PI = 0.159154943f;
 const float MATH_PIDIV2 = 1.570796327f;
 const float MATH_PIDIV4 = 0.785398163f;
 
+class float2
+{
+public:
+    float2(float x, float y) : x(x), y(y) {}
+    float2(float val) : x(val), y(val) {}
+    float2() : x(0), y(0) {}
+
+    float Length() const { return sqrt(x * x + y * y); }
+    float2 Normalize() const { return float2(x / Length(), y / Length()); }
+
+    // Scalar operators
+    float2 operator+ (float scalar) { return float2(x + scalar, y + scalar); }
+    float2 operator- (float scalar) { return float2(x - scalar, y - scalar); }
+    float2 operator* (float scalar) { return float2(x * scalar, y * scalar); }
+    float2 operator/ (float scalar) { return float2(x / scalar, y / scalar); }
+
+    // Vector operators
+    float2 operator+ (const float2& other) { return float2(x + other.x, y + other.y); }
+    float2 operator- (const float2& other) { return float2(x - other.x, y - other.y); }
+    friend float2 operator+ (const float2& lhs, const float2& rhs) { return float2(lhs.x + rhs.x, lhs.y + rhs.y); }
+    friend float2 operator- (const float2& lhs, const float2& rhs) { return float2(lhs.x - rhs.x, lhs.y - rhs.y); }
+
+    float2 operator+= (const float2& other) { x += other.x; y += other.y; return *this; }
+    float2 operator*= (const float& other) { x *= other;   y *= other;   return *this; }
+    float2 operator-= (const float2& other) { x -= other.x; y -= other.y; return *this; }
+    float2 operator- () { return float2(-x, -y); }
+
+    // Access
+    float& operator[] (size_t i) { return (i == 0) ? x : y; }
+    const float& operator[] (size_t i) const { return (i == 0) ? x : y; }
+
+public:
+    float x, y;
+
+};
+
 class float3
 {
 public:
@@ -69,45 +105,14 @@ public:
 
 #define float3_aligned _declspec(align(16)) float3
 
-class float2
-{
-public:
-    float2(float x, float y) : x(x), y(y) {}
-    float2(float val) : x(val), y(val) {}
-    float2() : x(0), y(0) {}
-
-    float Length() const { return sqrt(x*x + y*y); }
-    float2 Normalize() const { return float2(x / Length(), y / Length()); }
-
-    // Scalar operators
-    float2 operator+ (float scalar) { return float2(x + scalar, y + scalar); }
-    float2 operator- (float scalar) { return float2(x - scalar, y - scalar); }
-    float2 operator* (float scalar) { return float2(x * scalar, y * scalar); }
-    float2 operator/ (float scalar) { return float2(x / scalar, y / scalar); }
-
-    // Vector operators
-    float2 operator+ (const float2 &other) { return float2(x + other.x, y + other.y); }
-    float2 operator- (const float2 &other) { return float2(x - other.x, y - other.y); }
-    friend float2 operator+ (const float2 &lhs, const float2 &rhs) { return float2(lhs.x + rhs.x, lhs.y + rhs.y); }
-    friend float2 operator- (const float2 &lhs, const float2 &rhs) { return float2(lhs.x - rhs.x, lhs.y - rhs.y); }
-
-    float2 operator+= (const float2 &other) { x += other.x; y += other.y; return *this; }
-    float2 operator*= (const float  &other) { x *= other;   y *= other;   return *this; }
-    float2 operator-= (const float2 &other) { x -= other.x; y -= other.y; return *this; }
-    float2 operator- () { return float2(-x, -y); }
-
-    // Access
-    float&       operator[] (size_t i) { return (i == 0) ? x : y; }
-    const float& operator[] (size_t i) const { return (i == 0) ? x : y; }
-
-public:
-    float x, y;
-
-};
-
 inline float3 Cross(const float3& a, const float3& b)
 {
     return float3(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
+}
+
+inline float3 Normalize(const float3& vec)
+{
+    return vec.Normalize();
 }
 
 inline float Dot(const float3& a, const float3& b)
@@ -129,6 +134,42 @@ inline float3 Max(const float3 &a, const float3 &b)
 {
     return float3(std::max(a.x, b.x), std::max(a.y, b.y), std::max(a.z, b.z));
 }
+
+class float4
+{
+public:
+    float4(float _x, float _y, float _z, float _w) : x(_x), y(_y), z(_z), w(_w) {}
+    float4(float val) : x(val), y(val), z(val), w(val) {}
+    float4() : x(0), y(0), z(0), w(0) {}
+
+    float  Length()    const { return sqrt(x * x + y * y + z * z + w * w); }
+    float4 Normalize() const { return float4(x / Length(), y / Length(), z / Length(), w / Length()); }
+
+    // Scalar operators
+    float4 operator+ (float scalar) { return float4(x + scalar, y + scalar, z + scalar, w + scalar); }
+    float4 operator- (float scalar) { return float4(x - scalar, y - scalar, z - scalar, w - scalar); }
+    float4 operator* (float scalar) { return float4(x * scalar, y * scalar, z * scalar, w * scalar); }
+    float4 operator/ (float scalar) { return float4(x / scalar, y / scalar, z / scalar, w / scalar); }
+    friend float4 operator* (const float4& a, float b) { return float4(a.x * b, a.y * b, a.z * b, a.w * b); }
+
+    // Vector operators
+    friend float4 operator+ (const float4& lhs, const float4& rhs) { return float4(lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z, lhs.w + rhs.w); }
+    friend float4 operator- (const float4& lhs, const float4& rhs) { return float4(lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z, lhs.w - rhs.w); }
+
+    float4& operator+= (const float4& other) { x += other.x; y += other.y; z += other.z; w += other.w; return *this; }
+    float4& operator*= (const float& other)  { x *= other;   y *= other;   z *= other;   w *= other;   return *this; }
+    float4& operator-= (const float4& other) { x -= other.x; y -= other.y; z -= other.z; w -= other.w; return *this; }
+    friend float4 operator- (const float4& vec) { return float4(-vec.x, -vec.y, -vec.z, -vec.w); }
+
+    // Access
+    float& operator[] (size_t i) { return (i == 0) ? x : (i == 1 ? y : (i == 2 ? z : w)); }
+    const float& operator[] (size_t i) const { return (i == 0) ? x : (i == 1 ? y : (i == 2 ? z : w)); }
+
+    friend std::ostream& operator<< (std::ostream& os, const float4& vec) { return os << "(" << vec.x << ", " << vec.y << ", " << vec.z << ", " << vec.w << ")"; }
+
+public:
+    float x, y, z, w;
+};
 
 struct Aabb
 {
@@ -218,12 +259,12 @@ inline Aabb Union(const Aabb &b1, const Aabb &b2)
 
 struct Matrix
 {
-    static Matrix LookAtLH(const float3& eye, const float3& target, const float3& up = float3(0.0f, 0.0f, 1.0f));
-    static Matrix LookAtRH(const float3& eye, const float3& target, const float3& up = float3(0.0f, 0.0f, 1.0f));
-    static Matrix PerspectiveFovLH(float fov, float aspect, float z_near, float farZ);
-    static Matrix PerspectiveFovRH(float fov, float aspect, float z_near, float farZ);
-    static Matrix OrthoLH(float width, float height, float z_near, float farZ);
-    static Matrix OrthoRH(float width, float height, float z_near, float farZ);
+    static Matrix LookAtLH(const float3& position, const float3& target, const float3& up = float3(0.0f, 0.0f, 1.0f));
+    static Matrix LookAtRH(const float3& position, const float3& target, const float3& up = float3(0.0f, 0.0f, 1.0f));
+    static Matrix PerspectiveFovLH(float fov, float aspect, float z_near, float z_far);
+    static Matrix PerspectiveFovRH(float fov, float aspect, float z_near, float z_far);
+    static Matrix OrthoLH(float width, float height, float z_near, float z_far);
+    static Matrix OrthoRH(float width, float height, float z_near, float z_far);
     static Matrix Zero();
     static Matrix Identity();
     static Matrix Translation(const float3& translation);
@@ -261,9 +302,9 @@ struct Matrix
     Matrix Transpose() const
     {
         return Matrix(m[0][0], m[1][0], m[2][0], m[3][0],
-            m[0][1], m[1][1], m[2][1], m[3][1],
-            m[0][2], m[1][2], m[2][2], m[3][2],
-            m[0][3], m[1][3], m[2][3], m[3][3]);
+                      m[0][1], m[1][1], m[2][1], m[3][1],
+                      m[0][2], m[1][2], m[2][2], m[3][2],
+                      m[0][3], m[1][3], m[2][3], m[3][3]);
     }
 
     // Operators
@@ -279,38 +320,87 @@ struct Matrix
         return *this;
     }
 
-    float m[4][4];
+public:
+    union
+    {
+        float m[4][4];
+        struct
+        {
+            float m00, m01, m02, m03;
+            float m10, m11, m12, m13;
+            float m20, m21, m22, m23;
+            float m30, m31, m32, m33;
+        };
+        float4 col[4];
+    };
+
 };
 
-inline Matrix Matrix::LookAtLH(const float3& eye, const float3& target, const float3& up)
+inline Matrix Matrix::operator*(const Matrix& other)
 {
-    float3 zaxis = (target - eye).Normalize();
+    float4 SrcA0 = col[0];
+    float4 SrcA1 = col[1];
+    float4 SrcA2 = col[2];
+    float4 SrcA3 = col[3];
+
+    float4 SrcB0 = other.col[0];
+    float4 SrcB1 = other.col[1];
+    float4 SrcB2 = other.col[2];
+    float4 SrcB3 = other.col[3];
+
+    Matrix result;
+    result.col[0] = SrcA0 * SrcB0[0] + SrcA1 * SrcB0[1] + SrcA2 * SrcB0[2] + SrcA3 * SrcB0[3];
+    result.col[1] = SrcA0 * SrcB1[0] + SrcA1 * SrcB1[1] + SrcA2 * SrcB1[2] + SrcA3 * SrcB1[3];
+    result.col[2] = SrcA0 * SrcB2[0] + SrcA1 * SrcB2[1] + SrcA2 * SrcB2[2] + SrcA3 * SrcB2[3];
+    result.col[3] = SrcA0 * SrcB3[0] + SrcA1 * SrcB3[1] + SrcA2 * SrcB3[2] + SrcA3 * SrcB3[3];
+
+    return result;
+}
+
+inline Matrix Matrix::LookAtLH(const float3& position, const float3& target, const float3& up)
+{
+    float3 zaxis = (target - position).Normalize();
     float3 xaxis = Cross(up, zaxis).Normalize();
     float3 yaxis = Cross(zaxis, xaxis);
 
     return Matrix(xaxis.x, yaxis.x, zaxis.x, 0.0f,
         xaxis.y, yaxis.y, zaxis.y, 0.0f,
         xaxis.z, yaxis.z, zaxis.z, 0.0f,
-        -Dot(xaxis, eye), -Dot(yaxis, eye), -Dot(zaxis, eye), 1.0f);
+        -Dot(xaxis, position), -Dot(yaxis, position), -Dot(zaxis, position), 1.0f);
 }
 
-inline Matrix Matrix::LookAtRH(const float3& eye, const float3& target, const float3& up)
+inline Matrix Matrix::LookAtRH(const float3& position, const float3& target, const float3& up)
 {
-    float3 zaxis = (eye - target).Normalize();
-    float3 xaxis = Cross(up, zaxis).Normalize();
-    float3 yaxis = Cross(zaxis, xaxis);
+    const float3 f = Normalize(target - position);
+    const float3 s = Normalize(Cross(f, up));
+    const float3 u = Normalize(Cross(s, f));
 
-    return Matrix(xaxis.x, yaxis.x, zaxis.x, 0.0f,
-        xaxis.y, yaxis.y, zaxis.y, 0.0f,
-        xaxis.z, yaxis.z, zaxis.z, 0.0f,
-        -Dot(xaxis, eye), -Dot(yaxis, eye), -Dot(zaxis, eye), 1.0f);
+    Matrix view = Matrix::Identity();
+
+    view.m00 = s.x;
+    view.m10 = s.y;
+    view.m20 = s.z;
+
+    view.m01 = u.x;
+    view.m11 = u.y;
+    view.m21 = u.z;
+
+    view.m02 = -f.x;
+    view.m12 = -f.y;
+    view.m22 = -f.z;
+
+    view.m30 = -Dot(s, position);
+    view.m31 = -Dot(u, position);
+    view.m32 = Dot(f, position);
+
+    return view;
 }
 
-inline Matrix Matrix::PerspectiveFovLH(float fov, float aspect, float z_near, float farZ)
+inline Matrix Matrix::PerspectiveFovLH(float fov, float aspect, float z_near, float z_far)
 {
     float h = 1.0f / std::tanf(0.5f * fov);
     float w = h / aspect;
-    float range = farZ / (farZ - z_near);
+    float range = z_far / (z_far - z_near);
 
     return Matrix(w, 0.0f, 0.0f, 0.0f,
                   0.0f, h, 0.0f, 0.0f,
@@ -318,21 +408,23 @@ inline Matrix Matrix::PerspectiveFovLH(float fov, float aspect, float z_near, fl
                   0.0f, 0.0f, -range * z_near, 0.0f);
 }
 
-inline Matrix Matrix::PerspectiveFovRH(float fov, float aspect, float z_near, float farZ)
+inline Matrix Matrix::PerspectiveFovRH(float fov, float aspect, float z_near, float z_far)
 {
     float h = 1.0f / std::tanf(0.5f * fov);
     float w = h / aspect;
-    float range = farZ / (z_near - farZ);
 
-    return Matrix(w, 0.0f, 0.0f, 0.0f,
-                  0.0f, h, 0.0f, 0.0f,
-                  0.0f, 0.0f, range, -1.0f,
-                  0.0f, 0.0f, range * z_near, 0.0f);
+    Matrix proj = Matrix::Zero();
+    proj.m00 = w;
+    proj.m11 = h;
+    proj.m22 = -(z_far + z_near) / (z_far - z_near);
+    proj.m23 = -1.0f;
+    proj.m32 = -(2.0f * z_far * z_near) / (z_far - z_near);
+    return proj;
 }
 
-inline Matrix Matrix::OrthoLH(float width, float height, float z_near, float farZ)
+inline Matrix Matrix::OrthoLH(float width, float height, float z_near, float z_far)
 {
-    float range = 1.0f / (farZ - z_near);
+    float range = 1.0f / (z_far - z_near);
 
     return Matrix(2.0f / width, 0.0f, 0.0f, 0.0f,
                   0.0f, 2.0f / height, 0.0f, 0.0f,
@@ -340,9 +432,9 @@ inline Matrix Matrix::OrthoLH(float width, float height, float z_near, float far
                   0.0f, 0.0f, -range * z_near, 1.0f);
 }
 
-inline Matrix Matrix::OrthoRH(float width, float height, float z_near, float farZ)
+inline Matrix Matrix::OrthoRH(float width, float height, float z_near, float z_far)
 {
-    float range = 1.0f / (z_near - farZ);
+    float range = 1.0f / (z_near - z_far);
 
     return Matrix(2.0f / width, 0.0f, 0.0f, 0.0f,
                   0.0f, 2.0f / height, 0.0f, 0.0f,
@@ -436,4 +528,10 @@ template <typename T>
 inline T clamp(T value, T min, T max)
 {
     return (value < min) ? min : ((value > max) ? max : value);
+}
+
+// Other utils
+inline float3 SphericalToCartesian(float r, float phi, float theta)
+{
+    return float3(std::cosf(phi) * std::sinf(theta), std::sinf(phi) * std::sinf(theta), std::cosf(theta)) * r;
 }
