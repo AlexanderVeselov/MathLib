@@ -1,10 +1,27 @@
-#ifndef MATHLIB_HPP
-#define MATHLIB_HPP
+/*****************************************************************************
+ MIT License
+ Copyright(c) 2021 Alexander Veselov
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this softwareand associated documentation files(the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions :
+ The above copyright noticeand this permission notice shall be included in all
+ copies or substantial portions of the Software.
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+ *****************************************************************************/
+
+#pragma once
 
 #include <cmath>
-#include <algorithm>
 #include <cassert>
-#include <cstring>
 #include <iostream>
 
 const float MATH_PI = 3.141592654f;
@@ -45,14 +62,9 @@ public:
     const float& operator[] (size_t i) const { return (i == 0) ? x : (i == 1 ? y : z); }
 
     friend std::ostream& operator<< (std::ostream &os, const float3 &vec) { return os << "(" << vec.x << ", " << vec.y << ", " << vec.z << ")"; }
-    
+
 public:
     float x, y, z;
-
-private:
-    // Used for align to 4 bytes
-    float w;
-
 };
 
 #define float3_aligned _declspec(align(16)) float3
@@ -118,24 +130,22 @@ inline float3 Max(const float3 &a, const float3 &b)
     return float3(std::max(a.x, b.x), std::max(a.y, b.y), std::max(a.z, b.z));
 }
 
-struct Triangle;
-
-struct Bounds3
+struct Aabb
 {
 public:
-    Bounds3()
+    Aabb()
     {
-        float minNum = std::numeric_limits<float>::lowest();
-        float maxNum = std::numeric_limits<float>::max();
-        min = float3(maxNum, maxNum, maxNum);
-        max = float3(minNum, minNum, minNum);
+        float min_value = std::numeric_limits<float>::lowest();
+        float max_value = std::numeric_limits<float>::max();
+        min = float3(max_value, max_value, max_value);
+        max = float3(min_value, min_value, min_value);
     }
 
-    Bounds3(float3 p) :
+    Aabb(float3 p) :
         min(p), max(p)
     {}
 
-    Bounds3(float3 p1, float3 p2) :
+    Aabb(float3 p1, float3 p2) :
         min(Min(p1, p2)),
         max(Max(p1, p2))
     {}
@@ -182,7 +192,6 @@ public:
         return o;
     }
 
-    bool Intersects(const Triangle &triangle) const;
     void Project(float3 axis, float &mins, float &maxs) const;
 
 public:
@@ -191,17 +200,17 @@ public:
 
 };
 
-inline Bounds3 Union(const Bounds3 &b, const float3 &p)
+inline Aabb Union(const Aabb &b, const float3 &p)
 {
-    Bounds3 ret;
+    Aabb ret;
     ret.min = Min(b.min, p);
     ret.max = Max(b.max, p);
     return ret;
 }
 
-inline Bounds3 Union(const Bounds3 &b1, const Bounds3 &b2)
+inline Aabb Union(const Aabb &b1, const Aabb &b2)
 {
-    Bounds3 ret;
+    Aabb ret;
     ret.min = Min(b1.min, b2.min);
     ret.max = Max(b1.max, b2.max);
     return ret;
@@ -211,16 +220,17 @@ struct Matrix
 {
     static Matrix LookAtLH(const float3& eye, const float3& target, const float3& up = float3(0.0f, 0.0f, 1.0f));
     static Matrix LookAtRH(const float3& eye, const float3& target, const float3& up = float3(0.0f, 0.0f, 1.0f));
-    static Matrix PerspectiveFovLH(float fov, float aspect, float nearZ, float farZ);
-    static Matrix PerspectiveFovRH(float fov, float aspect, float nearZ, float farZ);
-    static Matrix OrthoLH(float width, float height, float nearZ, float farZ);
-    static Matrix OrthoRH(float width, float height, float nearZ, float farZ);
+    static Matrix PerspectiveFovLH(float fov, float aspect, float z_near, float farZ);
+    static Matrix PerspectiveFovRH(float fov, float aspect, float z_near, float farZ);
+    static Matrix OrthoLH(float width, float height, float z_near, float farZ);
+    static Matrix OrthoRH(float width, float height, float z_near, float farZ);
     static Matrix Zero();
     static Matrix Identity();
     static Matrix Translation(const float3& translation);
     static Matrix Translation(float x, float y, float z);
     static Matrix RotationAxis(const float3& axis, float angle);
     static Matrix RotationAxisAroundPoint(const float3& axis, const float3& point, float angle);
+    static Matrix Scaling(const float3& scale);
     static Matrix Scaling(float scalex, float scaley, float scalez);
 
     // Constructors
@@ -272,10 +282,158 @@ struct Matrix
     float m[4][4];
 };
 
+inline Matrix Matrix::LookAtLH(const float3& eye, const float3& target, const float3& up)
+{
+    float3 zaxis = (target - eye).Normalize();
+    float3 xaxis = Cross(up, zaxis).Normalize();
+    float3 yaxis = Cross(zaxis, xaxis);
+
+    return Matrix(xaxis.x, yaxis.x, zaxis.x, 0.0f,
+        xaxis.y, yaxis.y, zaxis.y, 0.0f,
+        xaxis.z, yaxis.z, zaxis.z, 0.0f,
+        -Dot(xaxis, eye), -Dot(yaxis, eye), -Dot(zaxis, eye), 1.0f);
+}
+
+inline Matrix Matrix::LookAtRH(const float3& eye, const float3& target, const float3& up)
+{
+    float3 zaxis = (eye - target).Normalize();
+    float3 xaxis = Cross(up, zaxis).Normalize();
+    float3 yaxis = Cross(zaxis, xaxis);
+
+    return Matrix(xaxis.x, yaxis.x, zaxis.x, 0.0f,
+        xaxis.y, yaxis.y, zaxis.y, 0.0f,
+        xaxis.z, yaxis.z, zaxis.z, 0.0f,
+        -Dot(xaxis, eye), -Dot(yaxis, eye), -Dot(zaxis, eye), 1.0f);
+}
+
+inline Matrix Matrix::PerspectiveFovLH(float fov, float aspect, float z_near, float farZ)
+{
+    float h = 1.0f / std::tanf(0.5f * fov);
+    float w = h / aspect;
+    float range = farZ / (farZ - z_near);
+
+    return Matrix(w, 0.0f, 0.0f, 0.0f,
+                  0.0f, h, 0.0f, 0.0f,
+                  0.0f, 0.0f, range, 1.0f,
+                  0.0f, 0.0f, -range * z_near, 0.0f);
+}
+
+inline Matrix Matrix::PerspectiveFovRH(float fov, float aspect, float z_near, float farZ)
+{
+    float h = 1.0f / std::tanf(0.5f * fov);
+    float w = h / aspect;
+    float range = farZ / (z_near - farZ);
+
+    return Matrix(w, 0.0f, 0.0f, 0.0f,
+                  0.0f, h, 0.0f, 0.0f,
+                  0.0f, 0.0f, range, -1.0f,
+                  0.0f, 0.0f, range * z_near, 0.0f);
+}
+
+inline Matrix Matrix::OrthoLH(float width, float height, float z_near, float farZ)
+{
+    float range = 1.0f / (farZ - z_near);
+
+    return Matrix(2.0f / width, 0.0f, 0.0f, 0.0f,
+                  0.0f, 2.0f / height, 0.0f, 0.0f,
+                  0.0f, 0.0f, range, 0.0f,
+                  0.0f, 0.0f, -range * z_near, 1.0f);
+}
+
+inline Matrix Matrix::OrthoRH(float width, float height, float z_near, float farZ)
+{
+    float range = 1.0f / (z_near - farZ);
+
+    return Matrix(2.0f / width, 0.0f, 0.0f, 0.0f,
+                  0.0f, 2.0f / height, 0.0f, 0.0f,
+                  0.0f, 0.0f, range, 0.0f,
+                  0.0f, 0.0f, range * z_near, 1.0f);
+}
+
+inline Matrix Matrix::Zero()
+{
+    return Matrix(0.0f, 0.0f, 0.0f, 0.0f,
+                  0.0f, 0.0f, 0.0f, 0.0f,
+                  0.0f, 0.0f, 0.0f, 0.0f,
+                  0.0f, 0.0f, 0.0f, 0.0f);
+}
+
+inline Matrix Matrix::Identity()
+{
+    return Matrix(1.0f, 0.0f, 0.0f, 0.0f,
+                  0.0f, 1.0f, 0.0f, 0.0f,
+                  0.0f, 0.0f, 1.0f, 0.0f,
+                  0.0f, 0.0f, 0.0f, 1.0f);
+}
+
+inline Matrix Matrix::RotationAxis(const float3& axis, float angle)
+{
+    float cosAngle = std::cosf(angle);
+    float sinAngle = std::sinf(angle);
+    float3 a = axis.Normalize();
+
+    Matrix result;
+    // Compute rotation of first basis vector
+    result.m[0][0] = a.x * a.x + (1 - a.x * a.x) * cosAngle;
+    result.m[0][1] = a.x * a.y * (1 - cosAngle) - a.z * sinAngle;
+    result.m[0][2] = a.x * a.z * (1 - cosAngle) + a.y * sinAngle;
+    result.m[0][3] = 0;
+
+    // Compute rotations of second and third basis vectors
+    result.m[1][0] = a.x * a.y * (1 - cosAngle) + a.z * sinAngle;
+    result.m[1][1] = a.y * a.y + (1 - a.y * a.y) * cosAngle;
+    result.m[1][2] = a.y * a.z * (1 - cosAngle) - a.x * sinAngle;
+    result.m[1][3] = 0;
+
+    result.m[2][0] = a.x * a.z * (1 - cosAngle) - a.y * sinAngle;
+    result.m[2][1] = a.y * a.z * (1 - cosAngle) + a.x * sinAngle;
+    result.m[2][2] = a.z * a.z + (1 - a.z * a.z) * cosAngle;
+    result.m[2][3] = 0;
+
+    result.m[3][3] = 1.0f;
+    return result;
+
+}
+
+inline Matrix Matrix::RotationAxisAroundPoint(const float3& axis, const float3& point, float angle)
+{
+    return Matrix::Translation(point) * Matrix::RotationAxis(axis, angle) * Matrix::Translation(-point);
+}
+
+inline Matrix Matrix::Translation(float x, float y, float z)
+{
+    return Matrix(1.0f, 0.0f, 0.0f, x,
+                  0.0f, 1.0f, 0.0f, y,
+                  0.0f, 0.0f, 1.0f, z,
+                  0.0f, 0.0f, 0.0f, 1.0f);
+}
+
+inline Matrix Matrix::Translation(const float3& translation)
+{
+    return Matrix(1.0f, 0.0f, 0.0f, translation.x,
+                  0.0f, 1.0f, 0.0f, translation.y,
+                  0.0f, 0.0f, 1.0f, translation.z,
+                  0.0f, 0.0f, 0.0f, 1.0f);
+}
+
+inline Matrix Matrix::Scaling(const float3& scale)
+{
+    return Matrix(scale.x, 0.0f, 0.0f, 0.0f,
+                  0.0f, scale.y, 0.0f, 0.0f,
+                  0.0f, 0.0f, scale.z, 0.0f,
+                  0.0f, 0.0f, 0.0f, 1.0f);
+}
+
+inline Matrix Matrix::Scaling(float scalex, float scaley, float scalez)
+{
+    return Matrix(scalex, 0.0f, 0.0f, 0.0f,
+                  0.0f, scaley, 0.0f, 0.0f,
+                  0.0f, 0.0f, scalez, 0.0f,
+                  0.0f, 0.0f, 0.0f, 1.0f);
+}
+
 template <typename T>
 inline T clamp(T value, T min, T max)
 {
     return (value < min) ? min : ((value > max) ? max : value);
 }
-
-#endif // MATHLIB_HPP
